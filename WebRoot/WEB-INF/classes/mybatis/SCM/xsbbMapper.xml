@@ -1,0 +1,531 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xsbbMapper">
+
+	<!-- 新订单列表  -->
+	<select id="datalistPage" parameterType="page" resultType="pd">
+		
+		SELECT  A.RQ, SUBSTRING(DATENAME(weekday,A.RQ),3,1) WEEK1,
+			Convert(decimal(18,2),SUM( XSJE - XSTHJE)) AS XSJE, 
+			Convert(decimal(18,2),SUM( ZZK)) AS ZZK, 
+			Convert(decimal(18,2),SUM(XSJE - XSTHJE - ZZK)) AS SJXS, 
+			Convert(decimal(18,2),SUM(ISNULL(PROFIT,0))) AS PROFIT 
+			FROM RE_SALES_GOODS A LEFT JOIN BA_TRADER B ON (A.SUPPLY_ID = B.TRADER_ID) 
+			LEFT JOIN  BA_GLJG_VIEW C ON (A.GZ_ID = C.GZ_ID) 
+			 WHERE A.SUPPLY_ID = #{pd.shopcode}
+			
+		<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), A.RQ , 120) >= #{pd.lastLoginStart} 
+			) 
+		</if>
+		<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+			 and 
+			(
+				 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), A.RQ , 120)
+			) 
+		</if>
+		
+		<if test="pd.SHOP_ID!= null and pd.SHOP_ID!=''">
+		       and A.WS_ID=#{pd.SHOP_ID}
+		</if>
+		 
+		GROUP BY A.RQ ,SUBSTRING(DATENAME(weekday,A.RQ),3,1) 
+		<!-- offset ${pd.ys} rows
+		fetch next 15 rows only -->
+		 <!-- ORDER BY A.RQ --> 
+	</select>
+	
+	<select id="xsqsConut" parameterType="page" resultType="pd">
+		select count(*) count from 
+		(SELECT A.RQ 
+			FROM RE_SALES_GOODS A LEFT JOIN BA_TRADER B ON (A.SUPPLY_ID = B.TRADER_ID) 
+			LEFT JOIN  BA_GLJG_VIEW C ON (A.GZ_ID = C.GZ_ID) 
+			 WHERE A.SUPPLY_ID = #{pd.shopcode}
+			
+		<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), A.RQ , 120) >= #{pd.lastLoginStart} 
+			) 
+		</if>
+		<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+			 and 
+			(
+				 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), A.RQ , 120)
+			) 
+		</if>
+		
+		GROUP BY A.RQ ,SUBSTRING(DATENAME(weekday,A.RQ),3,1) 
+		) userCount
+	</select>
+	
+	
+	
+	<select id="xslist" parameterType="page" resultType="pd">
+		SELECT  SUBSTRING(A.RQ,9,10) RQ, 
+			Convert(decimal(18,2),SUM( XSJE - XSTHJE)) AS XSJE
+			FROM RE_SALES_GOODS A LEFT JOIN BA_TRADER B ON (A.SUPPLY_ID = B.TRADER_ID) 
+			LEFT JOIN  BA_GLJG_VIEW C ON (A.GZ_ID = C.GZ_ID) 
+			where datediff(month,A.RQ,getdate())=0 and A.SUPPLY_ID = #{pd.shopcode}
+				GROUP BY A.RQ ,SUBSTRING(DATENAME(weekday,A.RQ),3,1) 
+				order by A.RQ
+	</select>
+	
+	<!-- 历史订单列表  -->
+	<select id="lsdatalistPage" parameterType="page" resultType="pd">
+		select top 15 * from (select row_number() over(order by A.GOODS_ID desc) as rownumber,
+		A.GOODS_ID, A.GOODS , C.PP_DESC , 
+			Convert(decimal(18,2),SUM(XSSL - XSTHSL )) AS XSSL,
+			Convert(decimal(18,2),SUM(XSJE -XSTHJE)) AS XSJE ,
+			Convert(decimal(18,2),SUM(XSTHSL)) AS XSTHSL, 
+			Convert(decimal(18,2),SUM(XSTHJE )) AS XSTHJE ,
+			Convert(decimal(18,2),SUM(ZZK)) AS ZZKJE, 
+			Convert(decimal(18,2),(SUM(ZZK)/NULLIF(((SUM(ZZK)+SUM(XSJE - XSTHJE - ZZK))),0))*100) zlv,
+			Convert(decimal(18,2),SUM(XSJE - XSTHJE - ZZK)) AS ZRJE,
+			Convert(decimal(18,2),SUM(PROFIT)) AS PROFIT , 
+			Convert(decimal(18,2),(SUM(PROFIT)/NULLIF((SUM(XSJE - XSTHJE - ZZK)),0) )*100) mlv                               
+			FROM RE_SALES_GOODS A LEFT JOIN TY_PP C ON (A.PP=C.PP_ID)
+			LEFT JOIN BA_GLJG_VIEW D ON (A.GZ_ID = D.GZ_ID)
+			LEFT JOIN BA_TRADER E ON (A.SUPPLY_ID = E.TRADER_ID)
+		WHERE 1=1
+			
+		<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), RQ , 120) >= #{pd.lastLoginStart} 
+			) 
+		</if>
+		<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+			 and 
+			(
+				 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), RQ , 120)
+			) 
+		</if>
+		
+		<if test="pd.GOODS!= null and pd.GOODS!=''">
+		     and A.GOODS LIKE CONCAT('%', CONCAT(#{pd.GOODS},'%'))
+		</if>
+		
+		<if test="pd.SHOP_ID!= null and pd.SHOP_ID!=''">
+		       and A.WS_ID=#{pd.SHOP_ID}
+		</if>
+		
+		<if test="pd.GOODS_ID!= null and pd.GOODS_ID!=''">
+		       and A.GOODS_ID=#{pd.GOODS_ID}
+		</if>
+		 GROUP BY A.GOODS_ID, A.GOODS , C.PP_DESC 
+		 ) temp_row where rownumber>=${pd.ys}
+		
+		 <!-- order by A.GOODS_ID desc
+		 offset ${pd.ys} rows
+		fetch next 15 rows only -->
+	</select>
+	
+	<select id="spmxhz" parameterType="pd" resultType="pd">
+		SELECT  Convert(decimal(18,2),SUM(XSSL - XSTHSL )) AS XSSL,
+			Convert(decimal(18,2),SUM(XSJE -XSTHJE)) AS XSJE ,
+			Convert(decimal(18,2),SUM(XSTHSL)) AS XSTHSL, 
+			Convert(decimal(18,2),SUM(XSTHJE )) AS XSTHJE ,
+			Convert(decimal(18,2),SUM(ZZK)) AS ZZKJE, 
+			Convert(decimal(18,2),SUM(XSJE - XSTHJE - ZZK)) AS ZRJE,
+			Convert(decimal(18,2),SUM(PROFIT)) AS PROFIT                             
+			FROM RE_SALES_GOODS A LEFT JOIN TY_PP C ON (A.PP=C.PP_ID)
+			LEFT JOIN BA_GLJG_VIEW D ON (A.GZ_ID = D.GZ_ID)
+			LEFT JOIN BA_TRADER E ON (A.SUPPLY_ID = E.TRADER_ID)
+		WHERE 1=1
+			
+		<if test="lastLoginStart != null and lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), RQ , 120) >= #{lastLoginStart} 
+			) 
+		</if>
+		<if test="lastLoginEnd != null and lastLoginEnd != ''">
+			 and 
+			(
+				 #{lastLoginEnd} >= CONVERT(CHAR(10), RQ , 120)
+			) 
+		</if>
+		
+		<if test="GOODS!= null and GOODS!=''">
+		     and A.GOODS LIKE CONCAT('%', CONCAT(#{GOODS},'%'))
+		</if>
+		
+		<if test="GOODS_ID!= null and GOODS_ID!=''">
+		       and A.GOODS_ID=#{GOODS_ID}
+		</if>
+		 
+	</select>
+	
+	<select id="xsmxConut" parameterType="page" resultType="pd">
+		select count(*) count from 
+		(SELECT A.GOODS_ID                             
+			FROM RE_SALES_GOODS A LEFT JOIN TY_PP C ON (A.PP=C.PP_ID)
+			LEFT JOIN BA_GLJG_VIEW D ON (A.GZ_ID = D.GZ_ID)
+			LEFT JOIN BA_TRADER E ON (A.SUPPLY_ID = E.TRADER_ID)
+		WHERE 1=1
+			
+		<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), RQ , 120) >= #{pd.lastLoginStart} 
+			) 
+		</if>
+		<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+			 and 
+			(
+				 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), RQ , 120)
+			) 
+		</if>
+		
+		<if test="pd.GOODS!= null and pd.GOODS!=''">
+		     and A.GOODS LIKE CONCAT('%', CONCAT(#{pd.GOODS},'%'))
+		</if>
+		
+		<if test="pd.GOODS_ID!= null and pd.GOODS_ID!=''">
+		       and A.GOODS_ID=#{pd.GOODS_ID}
+		</if>
+		 
+		 GROUP BY A.GOODS_ID, A.GOODS , C.PP_DESC 
+		 ) userCount
+	</select>
+	
+	<select id="rkthlist" parameterType="pd" resultType="pd">
+		select top 15 * from (select row_number() over(order by A.SHEET_DT desc) as rownumber,
+		 A.STATUS,A.SHEET_ID,A.DJLB,A.SUPPLY_ID,B.SUPPLY,D.STOCK_DESC,
+			(SELECT Convert(decimal(18,2),SUM(SL*HSJJ)) FROM DO_INSTORE_ITEM C WHERE C.SHEET_ID = A.SHEET_ID ) AS HSJJJE ,
+			(SELECT Convert(decimal(18,2),SUM(SL*PRICE)) FROM DO_INSTORE_ITEM C WHERE C.SHEET_ID = A.SHEET_ID ) AS LSJE,
+			 Convert(decimal(18,2),ROUND(A.HSJE- A.PAY_COST, 6)) AS BALANCE,
+			B.JYFS_DESC,A.SHEET_DT,A.CONTRACT_ID,A.STOCK_ID,A.CGY,F.USER_NAME AS CGY_NAME,
+			A.OPER_DT,A.CHECK_DT,A.WS_ID,A.OPER_ID,A.CHECK_ID,D.SHOP_NAME,A.MEMO
+			    
+			FROM  DO_INSTORE A LEFT JOIN ContractView B ON (A.CONTRACT_ID = B.CONTRACT_ID ) 
+			LEFT JOIN StockView D ON (A.STOCK_ID = D.STOCK_ID ) 
+			LEFT JOIN BA_GLJG_VIEW E ON (A.GZ_ID = E.GZ_ID ) 
+			LEFT JOIN SY_USER F ON (A.CGY = F.USER_ID)  
+			WHERE 1=1 
+			AND A.CONTRACT_ID = #{shopcode}
+		
+		<if test="lastLoginStart != null and lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), A.SHEET_DT , 120) >= #{lastLoginStart} 
+			) 
+		</if>
+		<if test="lastLoginEnd != null and lastLoginEnd != ''">
+			 and 
+			(
+				 #{lastLoginEnd} >= CONVERT(CHAR(10), A.SHEET_DT , 120)
+			) 
+		</if>
+		
+		<if test="WS_ID!= null and WS_ID!=''">
+		       and A.WS_ID=#{WS_ID}
+		</if>
+		
+		<if test="STOCK_ID!= null and STOCK_ID!=''">
+		       and A.STOCK_ID=#{STOCK_ID}
+		</if>
+		
+		<if test="SHEET_ID!= null and SHEET_ID!=''">
+		       and SHEET_ID=#{SHEET_ID}
+		</if>
+ 
+		<if test="GOODS!= null and GOODS!=''">
+			AND A.SHEET_ID IN (SELECT SHEET_ID FROM DO_INSTORE_ITEM WHERE GOODS LIKE CONCAT('%', CONCAT(#{GOODS},'%')) )
+		</if>
+		
+		<if test="GOODS_ID!= null and GOODS_ID!=''">
+			AND A.SHEET_ID IN (SELECT SHEET_ID FROM DO_INSTORE_ITEM WHERE GOODS_ID=#{GOODS_ID} ) 
+		</if>
+		) temp_row where rownumber>=${ys}
+		<!-- order by A.SHEET_DT desc 
+		offset ${ys} rows
+		fetch next 15 rows only -->
+	</select>
+	
+	<select id="rkthConut" parameterType="page" resultType="pd">
+		SELECT count(*) count
+			FROM  DO_INSTORE A LEFT JOIN ContractView B ON (A.CONTRACT_ID = B.CONTRACT_ID ) 
+			LEFT JOIN StockView D ON (A.STOCK_ID = D.STOCK_ID ) 
+			LEFT JOIN BA_GLJG_VIEW E ON (A.GZ_ID = E.GZ_ID ) 
+			LEFT JOIN SY_USER F ON (A.CGY = F.USER_ID) 
+			WHERE A.CONTRACT_ID = #{pd.shopcode}
+			
+		<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), A.SHEET_DT , 120) >= #{pd.lastLoginStart} 
+			) 
+		</if>
+		<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+			 and 
+			(
+				 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), A.SHEET_DT , 120)
+			) 
+		</if>
+		
+		<!-- <if test="pd.SHOP_ID!= null and pd.SHOP_ID!=''">
+		       and SHOP_ID LIKE CONCAT('%', CONCAT(#{pd.SHOP_ID},'%'))
+		</if> -->
+		 
+		<if test="pd.WS_ID!= null and pd.WS_ID!=''">
+		       and A.WS_ID=#{pd.WS_ID}
+		</if>
+		
+		<if test="pd.SHEET_ID!= null and pd.SHEET_ID!=''">
+		       and A.SHEET_ID=#{pd.SHEET_ID}
+		</if>
+ 
+		<if test="pd.GOODS!= null and pd.GOODS!=''">
+			AND A.SHEET_ID IN (SELECT SHEET_ID FROM DO_INSTORE_ITEM WHERE GOODS LIKE CONCAT('%', CONCAT(#{pd.GOODS},'%')) )
+		</if>
+		
+		<if test="pd.GOODS_ID!= null and pd.GOODS_ID!=''">
+			AND A.SHEET_ID IN (SELECT SHEET_ID FROM DO_INSTORE_ITEM WHERE GOODS_ID=#{pd.GOODS_ID} ) 
+		</if>	
+	</select>
+	
+	<select id="zxspdatalistPage" parameterType="page" resultType="pd">
+		select top 15 * from (select row_number() over(order by  A.ID desc) as rownumber,
+		DATEDIFF(DAY, A.RQ, GETDATE()) DAYS,A.HTH,B.SUPPLY,A.GOODS_ID,A.GOODS,
+			C.GUIGE,C.UNIT,CONVERT(CHAR(10), C.ZHJHRQ,120) AS ZHJHRQ,C.LAST_SALES,
+			Convert(decimal(18,2),A.HSJJ) HSJJ,
+			Convert(decimal(18,2),A.KCSL*A.HSJJ) AS KCJE,
+			Convert(decimal(18,2),A.DMS) DMS,
+			Convert(decimal(18,2),dbo.f_percent(A.KCSL,A.DMS)) SALES_DAYS,
+			Convert(decimal(18,2),C.RECE_SL) ONWAY,
+			A.EXEC_ID,A.EXEC_DT,A.MEMO
+			FROM (SELECT * FROM DO_GOODS_EXCEPTION 
+			  WHERE BILLTYPE =1 
+				<if test="pd.SHEET_ID!= null and pd.SHEET_ID!=''">
+					 and STOCK_ID=#{pd.STOCK_ID}
+				</if>
+			  ) A
+			LEFT JOIN ContractView B ON (A.HTH = B.CONTRACT_ID) 
+			LEFT JOIN StoreView C (NOLOCK) ON (A.STOCK_ID = C.STOCK_ID AND A.GOODS_ID = C.GOODS_ID)
+			WHERE 1=1 AND A.EXEC_FLAG='N'   AND A.HTH =  #{pd.shopcode}
+			) temp_row where rownumber>=${pd.ys}
+		<!-- order by A.ID desc 
+		offset ${pd.ys} rows
+		fetch next 15 rows only -->
+	</select>
+	
+	<select id="zxspConut" parameterType="page" resultType="pd">
+		SELECT    count(*) count                             
+		FROM (SELECT * FROM DO_GOODS_EXCEPTION 
+			  WHERE BILLTYPE =1 
+				<if test="pd.SHEET_ID!= null and pd.SHEET_ID!=''">
+					 and STOCK_ID=#{pd.STOCK_ID}
+				</if>
+			  ) A
+			LEFT JOIN ContractView B ON (A.HTH = B.CONTRACT_ID) 
+			LEFT JOIN StoreView C (NOLOCK) ON (A.STOCK_ID = C.STOCK_ID AND A.GOODS_ID = C.GOODS_ID)
+			WHERE 1=1 AND A.EXEC_FLAG='N'   AND A.HTH =  #{pd.shopcode}	
+		 
+	</select>
+	
+	
+	<select id="fkcdatalistPage" parameterType="page" resultType="pd">
+		select top 15 * from (select row_number() over(order by A.ZHHSJJ desc) as rownumber,
+		 A.STOCK_ID, A.STOCK_DESC, A.HTH,B.SUPPLY, A.GOODS_ID, A.GOODS, A.UNIT, 
+			 Convert(decimal(18,0),A.KCSL) KCSL , 
+			Convert(decimal(18,2),A.KCJE) KCJE , 
+			A.ZHHSJJ, A.LAST_SALES,CONVERT(CHAR(10), A.ZHJHRQ,120) AS ZHJHRQ,A.RECE_DATE,Convert(decimal(18,0),A.DMS) DMS,
+			 Convert(decimal(18,2),A.RECE_SL) RECE_SL                
+			FROM StoreView A (NOLOCK) 
+			LEFT JOIN ContractView B ON (A.HTH = B.CONTRACT_ID )   
+			WHERE ( 0 > KCSL OR (KCSL = 0 AND KCJE != 0 ))   AND A.HTH =  #{pd.shopcode}
+			
+		<if test="pd.SHEET_ID!= null and pd.SHEET_ID!=''">
+			 and A.STOCK_ID = #{pd.STOCK_ID}
+		</if>
+		) temp_row where rownumber>=${pd.ys}
+		<!-- order by A.ZHHSJJ desc 
+		offset ${pd.ys} rows
+		fetch next 15 rows only -->
+	</select>
+	
+	<select id="fkcConut" parameterType="page" resultType="pd">
+		SELECT    count(*) count                             
+		FROM StoreView A (NOLOCK) 
+			LEFT JOIN ContractView B ON (A.HTH = B.CONTRACT_ID )   
+			WHERE ( 0 > KCSL OR (KCSL = 0 AND KCJE != 0 ))   AND A.HTH =  #{pd.shopcode}
+			
+		<if test="pd.SHEET_ID!= null and pd.SHEET_ID!=''">
+			 and A.STOCK_ID = #{pd.STOCK_ID}
+		</if>
+	</select>
+	
+	<select id="qhspdatalistPage" parameterType="page" resultType="pd">
+		select top 15 * from (select row_number() over(order by A.ID desc) as rownumber,
+		 A.HTH,B.SUPPLY, B.SUPPLY_ID, A.GOODS_ID, A.GOODS,C.UNIT, C.GUIGE,  
+			 Convert(decimal(18,2),A.DMS) DMS,
+			Convert(decimal(18,0),C.KCSL) KCSL,
+			Convert(decimal(18,0),C.KCSL*C.HSJJ) KCJE,
+			Convert(decimal(18,2),DBO.F_PERCENT(C.KCSL, A.DMS)) DAYS ,
+			Convert(decimal(18,2),c.RECE_SL) RECE_SL,
+			C.RECE_DATE  
+			FROM (SELECT * FROM DO_GOODS_EXCEPTION WHERE BILLTYPE = 3 
+				<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+					 and 
+					(
+						CONVERT(CHAR(10), RQ , 120) >= #{pd.lastLoginStart} 
+					) 
+				</if>
+				<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+					 and 
+					(
+						 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), RQ , 120)
+					) 
+				</if>
+			) A  
+			LEFT JOIN ContractView B ON (A.HTH = B.CONTRACT_ID)  
+			LEFT JOIN StoreView C (NOLOCK) ON (A.GOODS_ID = C.GOODS_ID AND A.STOCK_ID= C.STOCK_ID) 
+			WHERE 1=1  AND A.HTH =  #{pd.shopcode}
+			
+		<if test="pd.SHEET_ID!= null and pd.SHEET_ID!=''">
+			 and A.STOCK_ID = #{pd.STOCK_ID}
+		</if>
+		) temp_row where rownumber>=${pd.ys}
+		<!-- order by A.ID desc 
+		offset ${pd.ys} rows
+		fetch next 15 rows only -->
+	</select>
+	
+	<select id="qhspConut" parameterType="page" resultType="pd">
+		SELECT    count(*) count                             
+		FROM (SELECT * FROM DO_GOODS_EXCEPTION WHERE BILLTYPE = 3 
+				<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+					 and 
+					(
+						CONVERT(CHAR(10), RQ , 120) >= #{pd.lastLoginStart} 
+					) 
+				</if>
+				<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+					 and 
+					(
+						 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), RQ , 120)
+					) 
+				</if>
+			) A  
+			LEFT JOIN ContractView B ON (A.HTH = B.CONTRACT_ID)  
+			LEFT JOIN StoreView C (NOLOCK) ON (A.GOODS_ID = C.GOODS_ID AND A.STOCK_ID= C.STOCK_ID) 
+			WHERE 1=1  AND A.HTH =  #{pd.shopcode}
+			
+		<if test="pd.SHEET_ID!= null and pd.SHEET_ID!=''">
+			 and A.STOCK_ID = #{pd.STOCK_ID}
+		</if>
+	</select>
+	
+	
+	
+	<select id="rkthxqList" parameterType="pd" resultType="pd">
+		SELECT A.SHEET_ID,B.ZJM,B.GOODS_ID,B.GOODS,B.GUIGE,B.UNIT,
+		Convert(decimal(18,2),B.BZHL) BZHL,
+		Convert(decimal(18,2),B.SL) SL,
+		Convert(decimal(18,2),B.PRICE) PRICE,
+		Convert(decimal(18,2),B.HSJJJE) HSJJJE,
+		Convert(decimal(18,2),B.HSJJ) HSJJ, 
+		Convert(decimal(18,2),(B.SL + B.ZPSL)*B.PRICE) LSJE
+		    FROM DO_INSTORE A LEFT JOIN DO_INSTORE_ITEM B ON (A.SHEET_ID = B.SHEET_ID )
+		       LEFT JOIN BA_GLJG_VIEW C ON (A.GZ_ID = C.GZ_ID ) 
+		       LEFT JOIN BA_STOCK D ON (A.STOCK_ID = D.STOCK_ID )
+		       LEFT JOIN BA_SHOP E ON (A.WS_ID = E.SHOP_ID ) 
+		       LEFT JOIN SY_USER F ON (A.OPER_ID = F.USER_ID )
+		       LEFT JOIN SY_USER G ON (A.CHECK_ID = G.USER_ID )
+		       LEFT JOIN BA_TRADER H ON (A.SUPPLY_ID = H.TRADER_ID )
+		       LEFT JOIN TY_JYFS   I ON (A.JYFS = I.JYFS_ID)
+		WHERE A.SHEET_ID = #{SHEET_ID}
+		ORDER BY  B.ITEM_NO
+		
+	</select>
+	
+	<select id="rkthxqhz" parameterType="pd" resultType="pd">
+		SELECT Convert(decimal(18,2),SUM(B.SL)) SL,
+		Convert(decimal(18,2),SUM(B.HSJJJE)) HSJJJE,
+		Convert(decimal(18,2),SUM((B.SL + B.ZPSL)*B.PRICE)) LSJE
+		    FROM DO_INSTORE A LEFT JOIN DO_INSTORE_ITEM B ON (A.SHEET_ID = B.SHEET_ID )
+		       LEFT JOIN BA_GLJG_VIEW C ON (A.GZ_ID = C.GZ_ID ) 
+		       LEFT JOIN BA_STOCK D ON (A.STOCK_ID = D.STOCK_ID )
+		       LEFT JOIN BA_SHOP E ON (A.WS_ID = E.SHOP_ID ) 
+		       LEFT JOIN SY_USER F ON (A.OPER_ID = F.USER_ID )
+		       LEFT JOIN SY_USER G ON (A.CHECK_ID = G.USER_ID )
+		       LEFT JOIN BA_TRADER H ON (A.SUPPLY_ID = H.TRADER_ID )
+		       LEFT JOIN TY_JYFS   I ON (A.JYFS = I.JYFS_ID)
+		WHERE A.SHEET_ID = #{SHEET_ID}
+	</select>
+	
+	<select id="rkthxqConut" parameterType="pd" resultType="pd">
+		SELECT A.STATUS,A.SHEET_ID,A.DJLB,A.SUPPLY_ID,B.SUPPLY,D.STOCK_DESC,
+			(SELECT Convert(decimal(18,2),SUM(SL*HSJJ)) FROM DO_INSTORE_ITEM C WHERE C.SHEET_ID = A.SHEET_ID ) AS HSJJJE ,
+			(SELECT Convert(decimal(18,2),SUM(SL*PRICE)) FROM DO_INSTORE_ITEM C WHERE C.SHEET_ID = A.SHEET_ID ) AS LSJE,
+			 Convert(decimal(18,2),ROUND(A.HSJE- A.PAY_COST, 6)) AS BALANCE,
+			B.JYFS_DESC,A.SHEET_DT,A.CONTRACT_ID,A.STOCK_ID,A.CGY,F.USER_NAME AS CGY_NAME,
+			A.OPER_DT,A.CHECK_DT,A.WS_ID,A.OPER_ID,A.CHECK_ID,D.SHOP_NAME,A.MEMO
+			    
+			FROM  DO_INSTORE A LEFT JOIN ContractView B ON (A.CONTRACT_ID = B.CONTRACT_ID ) 
+			LEFT JOIN StockView D ON (A.STOCK_ID = D.STOCK_ID ) 
+			LEFT JOIN BA_GLJG_VIEW E ON (A.GZ_ID = E.GZ_ID ) 
+			LEFT JOIN SY_USER F ON (A.CGY = F.USER_ID)  
+			WHERE 1=1 
+			AND A.CONTRACT_ID = #{shopcode} and A.SHEET_ID = #{SHEET_ID}
+		
+	</select>
+	
+	
+	<select id="selectDot" parameterType="pd" resultType="pd">
+		SELECT SHOP_ID, SHOP_NAME  FROM BA_SHOP
+	</select>
+	
+	<select id="selectDot1" parameterType="pd" resultType="pd">
+		SELECT STOCK_ID,STOCK_DESC FROM BA_STOCK 
+	</select>
+	
+	<select id="xsmxecel" parameterType="page" resultType="pd">
+		select  A.GOODS_ID, A.GOODS , C.PP_DESC , 
+			Convert(decimal(18,2),SUM(XSSL - XSTHSL )) AS XSSL,
+			Convert(decimal(18,2),SUM(XSJE -XSTHJE)) AS XSJE ,
+			Convert(decimal(18,2),SUM(XSTHSL)) AS XSTHSL, 
+			Convert(decimal(18,2),SUM(XSTHJE )) AS XSTHJE ,
+			Convert(decimal(18,2),SUM(ZZK)) AS ZZKJE, 
+			Convert(decimal(18,2),(SUM(ZZK)/NULLIF(((SUM(ZZK)+SUM(XSJE - XSTHJE - ZZK))),0))*100) zlv,
+			Convert(decimal(18,2),SUM(XSJE - XSTHJE - ZZK)) AS ZRJE,
+			Convert(decimal(18,2),SUM(PROFIT)) AS PROFIT , 
+			Convert(decimal(18,2),(SUM(PROFIT)/NULLIF((SUM(XSJE - XSTHJE - ZZK)),0) )*100) mlv                               
+			FROM RE_SALES_GOODS A LEFT JOIN TY_PP C ON (A.PP=C.PP_ID)
+			LEFT JOIN BA_GLJG_VIEW D ON (A.GZ_ID = D.GZ_ID)
+			LEFT JOIN BA_TRADER E ON (A.SUPPLY_ID = E.TRADER_ID)
+		WHERE 1=1
+			
+		<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), RQ , 120) >= #{pd.lastLoginStart} 
+			) 
+		</if>
+		<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+			 and 
+			(
+				 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), RQ , 120)
+			) 
+		</if>
+		
+		<if test="pd.GOODS!= null and pd.GOODS!=''">
+		     and A.GOODS LIKE CONCAT('%', CONCAT(#{pd.GOODS},'%'))
+		</if>
+		
+		<if test="pd.SHOP_ID!= null and pd.SHOP_ID!=''">
+		       and A.WS_ID=#{pd.SHOP_ID}
+		</if>
+		
+		<if test="pd.GOODS_ID!= null and pd.GOODS_ID!=''">
+		       and A.GOODS_ID=#{pd.GOODS_ID}
+		</if>
+		 GROUP BY A.GOODS_ID, A.GOODS , C.PP_DESC 
+		
+	</select>
+</mapper>

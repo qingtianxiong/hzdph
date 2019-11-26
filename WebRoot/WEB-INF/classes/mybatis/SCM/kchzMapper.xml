@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kchzMapper">
+
+	<!-- 新订单列表  -->
+	<select id="datalistPage" parameterType="page" resultType="pd">
+		select top 15 * from (select row_number() over(order by X.WS_ID desc) as rownumber,
+		 * from (
+		SELECT B.WS_ID,C.SHOP_NAME,A.STOCK_ID,B.STOCK_DESC ,
+			Convert(decimal(18,2),SUM(KCSL)) AS KCSL,
+			Convert(decimal(18,2),SUM(KCJE)) AS KCJE,
+			Convert(decimal(18,2),SUM(DEPQTY*ZHHSJJ)) DEPAMT,    
+			Convert(decimal(18,2),SUM(KCSL*PRICE)) LSJE,
+			Convert(decimal(18,2),SUM((PRICE-ZHHSJJ)*KCSL)) JXCE,                       
+			Convert(decimal(18,2),SUM(RECE_SL*ZHHSJJ)) AS RECE_COST                    
+			FROM RE_GOODS A ( NOLOCK) 
+			LEFT JOIN BA_STOCK B ON (A.STOCK_ID = B.STOCK_ID)   
+			LEFT JOIN BA_SHOP C ON (B.WS_ID = C.SHOP_ID )
+			   WHERE 1=1 AND A.HTH =  #{pd.shopcode}
+			
+		<if test="pd.GOODS_ID!= null and pd.GOODS_ID!=''">
+		       and A.GOODS_ID=#{pd.GOODS_ID}
+		</if>  
+		<if test="pd.STOCK_ID!= null and pd.STOCK_ID!=''">
+		       and A.STOCK_ID=#{pd.STOCK_ID}
+		</if> 
+		 GROUP BY A.STOCK_ID, B.STOCK_DESC, B.WS_ID, C.SHOP_NAME ) X
+		 ) temp_row where rownumber>=${pd.ys}
+		<!-- order by X.WS_ID desc 
+		offset ${pd.ys} rows
+		fetch next 15 rows only -->
+		 
+	</select>
+	
+	<select id="xlistConut" parameterType="page" resultType="pd">
+		select count(*) count from 
+		(SELECT B.WS_ID                  
+			FROM RE_GOODS A ( NOLOCK) 
+			LEFT JOIN BA_STOCK B ON (A.STOCK_ID = B.STOCK_ID)   
+			LEFT JOIN BA_SHOP C ON (B.WS_ID = C.SHOP_ID )
+			   WHERE 1=1 AND A.HTH =  #{pd.shopcode}
+		 
+		<if test="pd.GOODS_ID!= null and pd.GOODS_ID!=''">
+		       and A.GOODS_ID=#{pd.GOODS_ID}
+		</if>  
+		<if test="pd.STOCK_ID!= null and pd.STOCK_ID!=''">
+		       and A.STOCK_ID=#{pd.STOCK_ID}
+		</if> 
+		 GROUP BY A.STOCK_ID, B.STOCK_DESC, B.WS_ID, C.SHOP_NAME
+		 ) userCount
+	</select>
+	
+	<select id="selectDot" parameterType="pd" resultType="pd">
+		SELECT STOCK_ID,STOCK_DESC FROM BA_STOCK 
+	</select>
+	
+	<!-- 历史订单列表  -->
+	<select id="lsdatalistPage" parameterType="page" resultType="pd">
+		select top 15 * from (select row_number() over(order by A.GOODS_ID desc) as rownumber,
+		 A.GOODS_ID,A.GOODS,A.GUIGE,A.UNIT,A.LAST_SALES,
+			Convert(decimal(18,2),A.DMS) DMS,
+			Convert(decimal(18,2),A.KCSL) KCSL,
+			Convert(decimal(18,2),A.ZHHSJJ*A.KCSL) AS KCHSJE , 
+			Convert(decimal(18,2),A.PRICE*A.KCSL) LSJE ,
+			 Convert(decimal(18,2),(A.PRICE-A.ZHHSJJ)*KCSL) JXCJ,  
+			Convert(decimal(18,2),dbo.f_percent(A.KCSL, A.DMS)) SALES_DAYS
+			FROM StoreView A (NOLOCK) 
+			LEFT JOIN TY_GOODS B ON (A.TYGOODS_ID = B.TYGOODS_ID ) 
+			WHERE 1=1 AND A.HTH  = #{pd.shopcode}
+			
+		<if test="pd.GOODS!= null and pd.GOODS!=''">
+		       and A.GOODS LIKE CONCAT('%', CONCAT(#{pd.GOODS},'%'))
+		 </if>
+		 <if test="pd.GOODS_ID!= null and pd.GOODS_ID!=''">
+		       and A.GOODS_ID=#{pd.GOODS_ID}
+		</if>
+		<if test="pd.STOCK_ID!= null and pd.STOCK_ID!=''">
+		       and A.STOCK_ID=#{pd.STOCK_ID}
+		</if>
+		) temp_row where rownumber>=${pd.ys}
+		<!-- order by A.GOODS_ID desc 
+		offset ${pd.ys} rows
+		fetch next 15 rows only -->
+	</select>
+	
+	<select id="lslistConut" parameterType="page" resultType="pd">
+		select count(*) count 
+		FROM StoreView A (NOLOCK) 
+			LEFT JOIN TY_GOODS B ON (A.TYGOODS_ID = B.TYGOODS_ID ) 
+			WHERE 1=1 AND A.HTH  = #{pd.shopcode}
+			
+		<if test="pd.GOODS!= null and pd.GOODS!=''">
+		       and A.GOODS LIKE CONCAT('%', CONCAT(#{pd.GOODS},'%'))
+		 </if>
+		 <if test="pd.GOODS_ID!= null and pd.GOODS_ID!=''">
+		       and A.GOODS_ID=#{pd.GOODS_ID}
+		</if>   
+	</select>
+	
+	<select id="findShopcode" parameterType="pd" resultType="pd">
+		<!-- select * FROM RE_GZ_DAY where REGZDAY_ID = '1' -->
+		SELECT SHOPCODE,USER_NAME,BEG_DATE,END_DATE FROM sy_user_alliance where SHOPCODE = #{shopcode}
+	</select>
+</mapper>

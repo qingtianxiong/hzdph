@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xsqsMapper">
+
+	<!-- 新订单列表  -->
+	<select id="datalistPage" parameterType="page" resultType="pd">
+		select top 15 * from (select row_number() over(order by B.OPER_DT desc) as rownumber,
+		 E.NAME AS BILLTYPE_DESC,A.SHEET_ID, A.CONTRACT_ID,B.WS_ID ,D.SHOP_NAME ,
+			B.SHEET_DT,B.DHRQ,B.OPER_DT,B.OPER_ID,B.M_NOTE
+			FROM DO_DD_SUPPLY A LEFT JOIN  DO_DD B ON (A.SHEET_ID= B.SHEET_ID ) 
+			LEFT JOIN BA_TRADER C ON (A.SUPPLY_ID = C.TRADER_ID)  
+			LEFT JOIN BA_SHOP D ON (B.WS_ID = D.SHOP_ID) 
+			LEFT JOIN (SELECT * FROM TY_KIND WHERE KIND = 406) E ON (b.BILLTYPE = E.KIND_ID)
+			WHERE 1=1 AND A.PRINT_NUM = 0 AND A.CONTRACT_ID = #{pd.shopcode}
+			
+		<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), B.SHEET_DT, 120) >= #{pd.lastLoginStart} 
+			) 
+		</if>
+		<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+			 and 
+			(
+				 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), B.SHEET_DT, 120)
+			) 
+		</if>
+		
+		<if test="pd.WS_ID!= null and pd.WS_ID!=''">
+		       and B.WS_ID=#{pd.WS_ID}
+		</if>  
+		<if test="pd.SHEET_ID!= null and pd.SHEET_ID!=''">
+		       and A.SHEET_ID=#{pd.SHEET_ID}
+		</if> 
+		) temp_row where rownumber>=${pd.ys}
+		<!-- order by B.OPER_DT desc 
+		offset ${pd.ys} rows
+		fetch next 15 rows only -->
+	</select>
+	
+	<select id="xlistConut" parameterType="page" resultType="pd">
+		select count(*) count  
+		FROM DO_DD_SUPPLY A LEFT JOIN  DO_DD B ON (A.SHEET_ID= B.SHEET_ID ) 
+			LEFT JOIN BA_TRADER C ON (A.SUPPLY_ID = C.TRADER_ID)  
+			LEFT JOIN BA_SHOP D ON (B.WS_ID = D.SHOP_ID) 
+			LEFT JOIN (SELECT * FROM TY_KIND WHERE KIND = 406) E ON (b.BILLTYPE = E.KIND_ID)
+			WHERE 1=1 AND A.PRINT_NUM = 0 AND A.CONTRACT_ID = #{pd.shopcode}
+			
+		<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), B.SHEET_DT, 120) >= #{pd.lastLoginStart} 
+			) 
+		</if>
+		<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+			 and 
+			(
+				 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), B.SHEET_DT, 120)
+			) 
+		</if>
+		
+		<if test="pd.WS_ID!= null and pd.WS_ID!=''">
+		       and B.WS_ID=#{pd.WS_ID}
+		</if>  
+		<if test="pd.SHEET_ID!= null and pd.SHEET_ID!=''">
+		       and A.SHEET_ID=#{pd.SHEET_ID}
+		</if> 
+	</select>
+	
+	<!-- 历史订单列表  -->
+	<select id="lsdatalistPage" parameterType="page" resultType="pd">
+		select top 15 * from (select row_number() over(order by B.OPER_DT desc) as rownumber,
+		 E.NAME AS BILLTYPE_DESC,A.SHEET_ID,A.CONTRACT_ID,B.WS_ID ,D.SHOP_NAME ,
+				B.SHEET_DT,B.DHRQ,B.OPER_DT,B.OPER_ID, B.M_NOTE  
+                FROM DO_DD_SUPPLY A LEFT JOIN  DO_DD B ON (A.SHEET_ID= B.SHEET_ID ) 
+                 LEFT JOIN BA_TRADER C ON (A.SUPPLY_ID = C.TRADER_ID)  
+                 LEFT JOIN BA_SHOP D ON (B.WS_ID = D.SHOP_ID) 
+                 LEFT JOIN (SELECT * FROM TY_KIND WHERE KIND = 406) E ON (b.BILLTYPE = E.KIND_ID)
+                 WHERE 1=1 AND  A.CONTRACT_ID = #{pd.shopcode}
+			
+		<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), B.SHEET_DT, 120) >= #{pd.lastLoginStart} 
+			) 
+		</if>
+		<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+			 and 
+			(
+				 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), B.SHEET_DT, 120)
+			) 
+		</if>
+		
+		<!-- <if test="pd.SHOP_ID!= null and pd.SHOP_ID!=''">
+		       and SHOP_ID LIKE CONCAT('%', CONCAT(#{pd.SHOP_ID},'%'))
+		  </if>-->
+		 
+		<if test="pd.WS_ID!= null and pd.WS_ID!=''">
+		       and B.WS_ID=#{pd.WS_ID}
+		</if>  
+		) temp_row where rownumber>=${pd.ys}
+		
+		<!-- order by B.OPER_DT desc 
+		offset ${pd.ys} rows
+		fetch next 15 rows only -->
+	</select>
+	
+	<select id="lslistConut" parameterType="page" resultType="pd">
+		select count(*) count 
+		FROM DO_DD_SUPPLY A LEFT JOIN  DO_DD B ON (A.SHEET_ID= B.SHEET_ID ) 
+                 LEFT JOIN BA_TRADER C ON (A.SUPPLY_ID = C.TRADER_ID)  
+                 LEFT JOIN BA_SHOP D ON (B.WS_ID = D.SHOP_ID) 
+                 LEFT JOIN (SELECT * FROM TY_KIND WHERE KIND = 406) E ON (b.BILLTYPE = E.KIND_ID)
+                 WHERE 1=1 AND  A.CONTRACT_ID = #{pd.shopcode}
+			
+		<if test="pd.lastLoginStart != null and pd.lastLoginStart != ''">
+			 and 
+			(
+				CONVERT(CHAR(10), B.SHEET_DT, 120) >= #{pd.lastLoginStart} 
+			) 
+		</if>
+		<if test="pd.lastLoginEnd != null and pd.lastLoginEnd != ''">
+			 and 
+			(
+				 #{pd.lastLoginEnd} >= CONVERT(CHAR(10), B.SHEET_DT, 120)
+			) 
+		</if>
+		
+		<!-- <if test="pd.SHOP_ID!= null and pd.SHOP_ID!=''">
+		       and SHOP_ID LIKE CONCAT('%', CONCAT(#{pd.SHOP_ID},'%'))
+		  </if>-->
+		 
+		<if test="pd.WS_ID!= null and pd.WS_ID!=''">
+		       and B.WS_ID=#{pd.WS_ID}
+		</if>  
+	</select>
+	
+	<select id="findShopcode" parameterType="pd" resultType="pd">
+		<!-- select * FROM RE_GZ_DAY where REGZDAY_ID = '1' -->
+		SELECT SHOPCODE,USER_NAME,BEG_DATE,END_DATE FROM sy_user_alliance where SHOPCODE = #{shopcode}
+	</select>
+	
+	
+	
+	<select id="lszdxqList" parameterType="pd" resultType="pd">
+		SELECT A.ZJM,A.GOODS_ID,A.GOODS,A.GUIGE,A.UNIT,
+		Convert(decimal(18,2),A.BZHL)AS BZHL,
+		Convert(decimal(18,2),A.SL)AS SL,
+		Convert(decimal(18,2),A.PRICE)AS PRICE,
+		Convert(decimal(18,2),A.SL*A.HSJJ) HSJJJE,
+		Convert(decimal(18,2),A.HSJJ) HSJJ,
+		Convert(decimal(18,2),A.SL*A.PRICE) LSJE ,
+		D.SHEET_ID
+		  FROM  DO_DD_ITEM A LEFT JOIN DO_DD  B ON (A.SHEET_ID = B.SHEET_ID )
+		     LEFT JOIN BA_GLJG_VIEW C ON (B.GZ_ID = C.GZ_ID )
+		     LEFT JOIN DO_DD_SUPPLY D ON (A.SHEET_ID = D.SHEET_ID AND A.CONTRACT_ID = D.CONTRACT_ID   )
+		     LEFT JOIN BA_SHOP E ON (B.WS_ID = E.SHOP_ID ) 
+		     LEFT JOIN SY_USER F ON (B.OPER_ID = F.USER_ID )
+		     LEFT JOIN SY_USER G ON (B.CHECK_ID = G.USER_ID )
+		     LEFT JOIN BA_TRADER H ON (D.SUPPLY_ID = H.TRADER_ID  )
+		     LEFT JOIN ContractView I ON (A.CONTRACT_ID = I.CONTRACT_ID)
+		WHERE D.SHEET_ID = #{SHEET_ID}
+		
+	</select>
+	
+	<select id="lszdxqhz" parameterType="pd" resultType="pd">
+		SELECT Convert(decimal(18,2),SUM(A.SL))AS SL,
+		Convert(decimal(18,2),SUM(A.SL*A.HSJJ)) HSJJJE,		
+		Convert(decimal(18,2),SUM(A.SL*A.PRICE)) LSJE 
+		  FROM  DO_DD_ITEM A LEFT JOIN DO_DD  B ON (A.SHEET_ID = B.SHEET_ID )
+		     LEFT JOIN BA_GLJG_VIEW C ON (B.GZ_ID = C.GZ_ID )
+		     LEFT JOIN DO_DD_SUPPLY D ON (A.SHEET_ID = D.SHEET_ID AND A.CONTRACT_ID = D.CONTRACT_ID   )
+		     LEFT JOIN BA_SHOP E ON (B.WS_ID = E.SHOP_ID ) 
+		     LEFT JOIN SY_USER F ON (B.OPER_ID = F.USER_ID )
+		     LEFT JOIN SY_USER G ON (B.CHECK_ID = G.USER_ID )
+		     LEFT JOIN BA_TRADER H ON (D.SUPPLY_ID = H.TRADER_ID  )
+		     LEFT JOIN ContractView I ON (A.CONTRACT_ID = I.CONTRACT_ID)
+		WHERE D.SHEET_ID = #{SHEET_ID}
+		
+	</select>
+</mapper>

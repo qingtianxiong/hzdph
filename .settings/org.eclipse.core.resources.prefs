@@ -1,0 +1,16 @@
+eclipse.preferences.version=1
+encoding//WebRoot/WEB-INF/jsp/system/admin/head.jsp=UTF-8
+encoding//WebRoot/WEB-INF/jsp/system/admin/left.jsp=UTF-8
+encoding//WebRoot/WEB-INF/jsp/system/admin/top.jsp=UTF-8
+encoding//src/com/fh/controller/SCM/xsbbController.java=UTF-8
+encoding//src/com/fh/controller/Systemmanagement/AboutsystemController.java=UTF-8
+encoding//src/com/fh/controller/Systemmanagement/SystemadviceController.java=UTF-8
+encoding//src/com/fh/controller/information/pictures/PicturesController.java=UTF-8
+encoding//src/com/fh/controller/system/login/LoginController.java=UTF-8
+encoding//src/com/fh/controller/system/user/UserController.java=UTF-8
+encoding//src/com/fh/plugin/websocketInstantMsg/ChatServer.java=UTF-8
+encoding//src/com/fh/service/system/menu/MenuService.java=UTF-8
+encoding//src/com/fh/service/system/role/RoleService.java=UTF-8
+encoding//src/com/fh/service/system/user/UserService.java=UTF-8
+encoding//src/com/fh/util/ConnectionUtil.java=UTF-8
+encoding/<project>=GBK
